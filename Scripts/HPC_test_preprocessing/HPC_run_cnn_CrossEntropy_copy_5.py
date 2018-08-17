@@ -649,7 +649,7 @@ tick_marks = np.arange(len(class_label_dict.values()))
 cen_tick = tick_marks + 0.5
 #Plot the dataframe
 sn.set(font_scale=1.4)
-sn.heatmap(df_cm, annot=False,annot_kws={"size": 12})
+sn.heatmap(df_cm, annot=True,annot_kws={"size": 12})
 #Add the labels and the postions of the tick marks
 plt.xticks(cen_tick, class_label_dict.values(), rotation=45, fontsize=8)
 plt.yticks(cen_tick, class_label_dict.values(),rotation=45, fontsize=8)
