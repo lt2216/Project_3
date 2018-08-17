@@ -1,7 +1,7 @@
 Setting up the environment:
 
 1. Clone repository.
-2. Set working directory to 'Scripts/HPC_test_preprocessing/1.HPC_pre-processing'\
+2. Set working directory to 'Scripts/HPC_test_preprocessing/1.HPC_pre-processing'
 
 
 Pipeline:
