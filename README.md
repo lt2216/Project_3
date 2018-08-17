@@ -1,9 +1,9 @@
 Setting up the environment:
 
 1. Clone repository.
-2. Set working directory to 'Scripts/HPC_test_preprocessing/1.HPC_pre-processing'
+2. Set working directory to 'Scripts/HPC_test_preprocessing/1.HPC_pre-processing'\
 
-\\
+
 Pipeline:
 
 1. Simulations for the 1,2 and 3 epochs models
