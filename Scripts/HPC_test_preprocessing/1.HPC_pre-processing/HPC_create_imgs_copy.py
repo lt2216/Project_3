@@ -720,13 +720,6 @@ def image_simulation(path1,path2,S, N, file_name, NCHROMS, threshold, apply_thre
 			for j in range(NCHROMS):
 				f = list(file[pointer + j])
 				del f[-1]
-				
-				######## string processing: if not 0/1 --> convert to 1 #######
-				
-				f = ['1' if element!='0' and element!=1 else element for element in f]
-				
-				###############################################################
-				
 				position_it = file[pointer - 1].split()
 				del position_it[0]
 				position_it = np.array(position_it, dtype='float')

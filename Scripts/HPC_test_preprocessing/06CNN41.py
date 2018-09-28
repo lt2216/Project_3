@@ -215,12 +215,26 @@ def convert_label_to_pmf(y, nb_classes, class_label_dict):
 
 	x = np.array(class_label_dict.keys()).astype(np.float)	#Vector of labels
 	xU, xL = x + 0.5, x - 0.5
+
 	for n,lab in enumerate(y_max):
-		prob = ss.norm.cdf(xU, loc=lab, scale = 1.5) - ss.norm.cdf(xL, loc=lab, scale = 1.5)
-		prob = prob / prob.sum() #normalize the probabilities so their sum is 1
-		y[n] = prob
+		if lab < 25:
+			#prob = ss.norm.cdf(xU, loc=y_max, scale = 1) - ss.norm.cdf(xL, loc=y_max, scale = 1)
+			prob = ss.norm.cdf(xU, scale=0.01,loc=lab) - ss.norm.cdf(xL, scale=0.01,loc=lab)
+			prob = prob / prob.sum() #normalize the probabilities so their sum is 1
+			y[n] = prob
+		else:
+			#prob = ss.norm.cdf(xU, loc=y_max, scale = 1) - ss.norm.cdf(xL, loc=y_max, scale = 1)
+			prob = ss.norm.cdf(xU, scale=0.6,loc=lab) - ss.norm.cdf(xL, scale=0.6,loc=lab)
+			prob = prob / prob.sum() #normalize the probabilities so their sum is 1
+			y[n] = prob
 
 	return y
+
+from keras import backend as K
+
+def SSE(y_true, y_pred):
+
+	return K.square(y_true - y_pred)
 
 
 									##################################################################################################
@@ -366,7 +380,7 @@ model_file_name = os.path.splitext(userInput)[0]
 
 #Create directory for the CNN
 if training_options == 3:
-	CNN_dir = results_directory + '/CNN_' + argv[11] + '_PMF'
+	CNN_dir = results_directory + '/CNN_' + argv[11] + '_PMF' + '41'
 	#CNN_dir = results_directory + '/CNN_' + 'M_m' + '_PMF'
 
 elif training_options == 1:
@@ -382,27 +396,33 @@ class_label_dict = dict(zip(range(len(np.arange(0,410,10))+1), np.unique(map(int
 
 ############## Convert to 41 classes to 5 classes ############## For this, create new dic, convert previous label arrays.
 
-#class_label_dict = dict(zip(range(len(np.arange(0,400,80))+1), np.unique(map(int,np.arange(0,400,80)))))  #For 5 classes.
+#labels = list(range(len(np.arange(0,400,80))+1))
+#params = np.unique(list(map(int,np.arange(0,400,80))))
 
-label40_label5_dict = {}
-counter = 0
-old_labels = np.arange(41)
-new_labels = np.zeros(len(old_labels)).astype(int)
+#class_label_dict = dict(zip(labels, params))  #For 5 classes.
 
-new_labels[0:8] = 0
-new_labels[8:16] = 1
-new_labels[16:24] = 2
-new_labels[24:32] = 3
-new_labels[32:] = 4
+#label40_label5_dict = {}
+#counter = 0
+#old_labels = np.arange(41)
+#new_labels = np.zeros(len(old_labels)).astype(int)
 
-for i,l in enumerate(old_labels):
-	label40_label5_dict[l] = new_labels[i]
+#new_labels[0:8] = 0
+#new_labels[8:16] = 1
+#new_labels[16:24] = 2
+#new_labels[24:32] = 3
+#new_labels[32:] = 4
+
+#for i,l in enumerate(old_labels):
+#	label40_label5_dict[l] = new_labels[i]
+
+
 
 
 f = gzip.GzipFile(results_directory + '/train_im.npy.gz', 'r')
 X_train = np.load(f)
 X_train = X_train.astype(float)
 f.close()
+#X_train = (X_train*2)-1
 y_train = np.load(results_directory + '/train_par.npy')
 #y_train = [label40_label5_dict[old_label] for old_label in y_train]
 
@@ -410,6 +430,7 @@ f = gzip.GzipFile(results_directory + '/val_im.npy.gz', 'r')
 X_val = np.load(f)
 X_val = X_val.astype(float)
 f.close()
+#X_val = (X_val*2)-1
 y_val = np.load(results_directory + '/val_par.npy')
 #y_val = [label40_label5_dict[old_label] for old_label in y_val]
 
@@ -417,6 +438,7 @@ f = gzip.GzipFile(results_directory + '/test_im.npy.gz', 'r')
 X_test = np.load(f)
 X_test = X_test.astype(float)
 f.close()
+#X_test = (X_test*2)-1
 y_test = np.load(results_directory + '/test_par.npy')
 #y_test = [label40_label5_dict[old_label] for old_label in y_test]
 
@@ -431,9 +453,9 @@ nb_classes = len(class_label_dict.keys())
 
 if training_options == 1:
 
-	y_train= keras.utils.np_utils.to_categorical(y_train,nb_classes)
-	y_val= keras.utils.np_utils.to_categorical(y_val,nb_classes)
-	y_test= keras.utils.np_utils.to_categorical(y_test,nb_classes)
+	y_train= keras.utils.np_utils.to_categorical(y_train,nb_classes) + 1e-07
+	y_val= keras.utils.np_utils.to_categorical(y_val,nb_classes) + 1e-07
+	y_test= keras.utils.np_utils.to_categorical(y_test,nb_classes) + 1e-07
 
 elif training_options == 3:
 
@@ -471,7 +493,7 @@ pooling_size = int(argv[10]) #2
 from keras.backend import tensorflow_backend as K
 
 #sess=tensorflow.Session(config=tensorflow.ConfigProto(intra_op_parallelism_threads=12))
-sess=tensorflow.Session(config=tensorflow.ConfigProto(intra_op_parallelism_threads=12))
+sess=tensorflow.Session(config=tensorflow.ConfigProto(intra_op_parallelism_threads=3))
 K.set_session(sess)
 
 						###################################
@@ -486,7 +508,7 @@ CNN = keras.models.Sequential()
 #ROUND ONE OF PATTERN: CONV, MAX POOL, DROPOUT
 #Declare the input layer
 CNN.add(keras.layers.convolutional.Convolution2D(filters,(kernel_size, kernel_size), strides=(1,1),padding='same', data_format='channels_last', input_shape=(row_size,col_size,channels)))
-CNN.add(LeakyReLU(alpha=0.1))
+CNN.add(LeakyReLU(alpha=0.01))
 #Add pooling layer: Max Pooling method (Parameter reduction)
 CNN.add(keras.layers.convolutional.MaxPooling2D(pool_size=(pooling_size,pooling_size)))
 #Add dropout layer: regularises model to prevent over-fitting
@@ -495,7 +517,7 @@ CNN.add(keras.layers.core.Dropout(rate=0.7)) #0.7
 #ROUND TWO OF PATTERN: CONV, MAX POOL, DROPOUT
 #Add convolutional layer
 CNN.add(keras.layers.convolutional.Convolution2D(filters,(kernel_size, kernel_size), strides=(1,1),padding='same', data_format='channels_last'))
-CNN.add(LeakyReLU(alpha=0.1))
+CNN.add(LeakyReLU(alpha=0.01))
 #Add pooling layer: Max Pooling method (Parameter reduction)
 CNN.add(keras.layers.convolutional.MaxPooling2D(pool_size=(pooling_size,pooling_size)))
 #Add dropout layer: regularises model to prevent over-fitting
@@ -504,7 +526,7 @@ CNN.add(keras.layers.core.Dropout(rate=0.7)) #0.7
 #ROUND THREE OF PATTERN: CONV, MAX POOL, DROPOUT
 #Add convolutional layer
 CNN.add(keras.layers.convolutional.Convolution2D(filters,(kernel_size, kernel_size), strides=(1,1),padding='same', data_format='channels_last'))
-CNN.add(LeakyReLU(alpha=0.1))
+CNN.add(LeakyReLU(alpha=0.01))
 #Add pooling layer: Max Pooling method (Parameter reduction)
 CNN.add(keras.layers.convolutional.MaxPooling2D(pool_size=(pooling_size,pooling_size)))
 #Add dropout layer: regularises model to prevent over-fitting
@@ -514,7 +536,7 @@ CNN.add(keras.layers.core.Dropout(rate=0.7)) #0.7
 #Weights of previous layers are flattened(made 1D) before passing to the fully connected dense layer
 CNN.add(keras.layers.core.Flatten())
 CNN.add(keras.layers.core.Dense(128))
-CNN.add(LeakyReLU(alpha=0.1))
+CNN.add(LeakyReLU(alpha=0.01))
 #Add dropout layer: regularises model to prevent over-fitting
 #CNN.add(keras.layers.core.Dropout(rate=0.5))
 #Add output layer
@@ -531,6 +553,8 @@ keras.utils.plot_model(CNN, to_file=CNN_dir +'/'+'model.png')
 
 #Compiling the neural network using KL divergence as a loss function.
 #Adams optimizer is still used
+
+#CNN.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 CNN.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 
 						###########################
@@ -564,8 +588,9 @@ hist_df.plot(ax=ax)
 #Set the x and y labels
 ax.set_ylabel('Accuracy/Loss')
 ax.set_xlabel('# epochs')
+plt.grid(True)
 #ax.set_ylim(.99*hist_df[1:].values.min(), 1.1*hist_df[1:].values.max())
-plt.savefig(CNN_dir +'/' + model_file_name + "_" +  options_training_name + "_"  + "loss_acc.pdf")
+plt.savefig(CNN_dir +'/loss_acc.pdf')
 
 
 							######################
@@ -605,7 +630,7 @@ plt.title('Training loss and validation loss',fontsize=12)
 plt.grid(True)
 plt.legend(['Training loss','Validation loss'],fontsize=12)
 plt.style.use(['classic'])
-plt.savefig(CNN_dir +'/'+ "Loss.eps")
+#plt.savefig(CNN_dir +'/'+ "Loss.eps")
 
 
 plt.figure(2,figsize=(7,5),facecolor='white')
@@ -628,7 +653,7 @@ y_pred = np.argmax(Y_pred, axis=1)
 y_truth = np.argmax(y_test, axis=1)
 
 np.save(CNN_dir + "/y_truth",y_truth)
-np.save(CNN_dir + "/y_pred",y_pred)
+np.save(CNN_dir + "/y_pred",Y_pred)
 
 
 			############## CONFUSION MATRIX ##############
@@ -656,7 +681,7 @@ plt.yticks(cen_tick, class_label_dict.values(),rotation=45, fontsize=8)
 plt.ylabel('True label')
 plt.xlabel('Predicted label')
 #Save the plot
-plt.savefig(CNN_dir +'/'+ model_file_name + "_" + options_training_name + "Confusion Matrix.pdf",bbox_inches='tight')
+plt.savefig(CNN_dir +'/Confusion Matrix.pdf',bbox_inches='tight')
 plt.clf()
 plt.cla()
 plt.close()
@@ -665,7 +690,7 @@ plt.close()
 				############# CLASSIFICATION REPORT ##############
 
 
-selection_coefficients_str = map(str, class_label_dict.values())
+#selection_coefficients_str = map(str, class_label_dict.values())
 #This could be formatted to be in a given order
-cr = classification_report(y_truth, y_pred, labels= class_label_dict.keys(), target_names = selection_coefficients_str )
-classification_report_csv(cr)
+#cr = classification_report(y_truth, y_pred, labels= class_label_dict.keys(), target_names = selection_coefficients_str )
+#classification_report_csv(cr)
